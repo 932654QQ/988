@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>今日任務</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family: 'Open Sans', sans-serif; background:#f5f5f5; color:#000; }
+    .app-container { max-width:480px; margin:0 auto; background:#fff; min-height:100vh; display:flex; flex-direction:column; }
+
+    /* Header */
+    .header { padding:14px; background:#fff; border-bottom:1px solid #eee; position:sticky; top:0; z-index:10; text-align:center; font-size:18px; font-weight:600; color:#000; }
+
+    /* Task Section */
+    .task-section { 
+      flex: auto; 
+      padding: 32px 12px 12px; 
+      background:#f8f8f8; 
+      overflow: hidden; 
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+    }
+    .task-card { 
+      background:#fff; 
+      border-radius:16px; 
+      overflow:hidden; 
+      box-shadow:0 6px 20px rgba(0,0,0,0.1); 
+      position:relative; 
+      transition: transform 1.2s ease-out, opacity 1.2s ease-out; 
+    }
+
+    /* 慢速縮小 + 左移 + 新商品右移 + 放大 */
+    .task-card.shrink-out {
+      transform: scale(0.7) translateX(-100%);
+      opacity: 0;
+      transition: transform 1.2s ease-out 0s, opacity 1.2s ease-out 0s;
+    }
+    .task-card.slide-in {
+      transform: translateX(100%) scale(0.7);
+      opacity: 0;
+      transition: transform 1s ease-out 1.2s, opacity 1s ease-out 1.2s;
+    }
+    .task-card.zoom-in {
+      transform: translateX(0) scale(1);
+      opacity: 1;
+      transition: transform 1s ease-out 2.2s, opacity 1s ease-out 2.2s;
+    }
+
+    .task-img-wrapper { height: 180px; overflow: hidden; position: relative; }
+    .task-img { width: 100%; height: 100%; object-fit: cover; object-position: center; }
+
+    .task-info { padding:16px; position:relative; }
+    .title-wrapper { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+    .task-title { font-size:15px; font-weight:500; line-height:1.3; flex:1; }
+    .tag-new { font-size:11px; padding:3px 10px; background:#fe2c55; color:#fff; border-radius:12px; font-weight:500; white-space:nowrap; }
+    .price-wrapper { display:flex; align-items:baseline; gap:6px; margin-bottom:6px; }
+    .task-price { font-size:20px; font-weight:700; color:#000; letter-spacing:-0.5px; }
+    .old-price { font-size:14px; color:#999; text-decoration:line-through; }
+    .promo-tags { display:flex; gap:6px; margin:6px 0; }
+    .tag { font-size:11px; padding:2px 8px; border-radius:12px; font-weight:500; }
+    .tag-hot { background:#ff6b6b; color:#fff; }
+    .tag-free { background:#e6fff0; color:#00b96b; }
+    .commission { font-size:14px; font-weight:500; color:#fe2c55; margin:6px 0; }
+    .sold { font-size:12px; color:#666; margin:4px 0; }
+    .rating { color:#faad14; font-size:12px; margin:4px 0; }
+    .shop-name { display:flex; align-items:center; font-size:13px; color:#666; margin:8px 0; font-weight:400; }
+    .shop-icon { font-size:14px; color:#fe2c55; margin-right:6px; }
+    .buy-btn { 
+      position:absolute; 
+      bottom:16px; 
+      right:16px; 
+      background:#000000; 
+      color:#ffffff; 
+      border:none; 
+      padding:10px 20px; 
+      font-size:14px; 
+      font-weight:600; 
+      border-radius:10px; 
+      cursor:pointer; 
+      display:flex; 
+      align-items:center; 
+      gap:8px; 
+      box-shadow:0 3px 10px rgba(0,0,0,0.4); 
+      transition:background 0.3s; 
+    }
+    .buy-btn:hover { background:#222222; }
+    .buy-btn i { font-size:16px; }
+
+    /* Stats Section */
+    .stats-section { 
+      flex: auto; 
+      padding:20px 12px; 
+      background:#fff; 
+      border-top:1px solid #eee; 
+    }
+    .stats-container { 
+      display: flex; 
+      justify-content: space-between; 
+      gap: 12px; 
+    }
+    .stat-card { 
+      flex: 1; 
+      background: linear-gradient(135deg, #1e1e1e, #2a2a2a); 
+      border-radius: 16px; 
+      padding: 16px 12px; 
+      text-align: center; 
+      box-shadow: 0 6px 20px rgba(0,0,0,0.3); 
+      border: 1px solid #444; 
+      transition: transform 0.2s, box-shadow 0.2s; 
+      color: #fff; 
+    }
+    .stat-card:hover { 
+      transform: translateY(-4px); 
+      box-shadow: 0 10px 30px rgba(0,0,0,0.4); 
+    }
+    .stat-icon { font-size: 32px; margin-bottom: 10px; opacity: 0.9; }
+    .stat-num { font-size: 24px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 4px; }
+    .stat-label { font-size: 13px; opacity: 0.8; font-weight: 400; }
+    #balance .stat-icon { color: #34c759; }
+    #commission .stat-icon { color: #ff2d55; }
+    #tasks .stat-icon { color: #007aff; }
+
+    /* Bottom Nav */
+    .bottom-nav { position:fixed; bottom:0; left:0; right:0; max-width:480px; margin:0 auto; height:60px; background:#fff; border-top:1px solid #eee; display:flex; justify-content:space-around; align-items:center; box-shadow:0 -2px 10px rgba(0,0,0,0.08); z-index:100; }
+    .nav-item { text-align:center; color:#666; font-size:11px; cursor:pointer; flex:1; padding:8px 0; font-weight:400; }
+    .nav-item.active { color:#fe2c55; font-weight:500; }
+    .nav-item i { font-size:26px; margin-bottom:2px; display:block; }
+    .nav-spacer { flex:1; }
+
+    /* Modal */
+    .modal { position:fixed; inset:0; background:rgba(0,0,0,0.6); display:none; align-items:center; justify-content:center; z-index:200; }
+    .modal-content { background:#fff; width:88%; max-width:360px; border-radius:16px; padding:20px; position:relative; box-shadow:0 8px 24px rgba(0,0,0,0.2); }
+    .modal-close { position:absolute; top:12px; right:16px; font-size:28px; color:#999; cursor:pointer; }
+    .modal h3 { font-size:18px; font-weight:600; margin-bottom:16px; text-align:center; }
+    .modal p { font-size:14px; margin:8px 0; color:#333; font-weight:400; }
+    .confirm-btn { 
+      background:#000; 
+      color:#fff; 
+      border:none; 
+      padding:10px 24px; 
+      font-size:14px; 
+      font-weight:600; 
+      border-radius:8px; 
+      cursor:pointer; 
+      margin-top:12px; 
+      display:block; 
+      margin-left:auto; 
+      margin-right:auto; 
+    }
+
+    /* Profile - 完整恢復 */
+    .profile-upper { flex:3; padding:16px; background:#fff; border-bottom:1px solid #eee; }
+    .wallet-panel { background:linear-gradient(135deg, #007aff, #5ac8fa); border-radius:16px; padding:20px 16px; color:#fff; box-shadow:0 4px 12px rgba(0,122,255,0.3); }
+    .wallet-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
+    .wallet-title { font-size:15px; font-weight:500; }
+    .wallet-icons { display:flex; gap:8px; align-items:center; }
+    .wallet-icon { background:rgba(255,255,255,0.2); border-radius:999px; padding:4px 10px; font-size:13px; font-weight:400; display:flex; align-items:center; gap:4px; }
+    .wallet-balance { font-size:32px; font-weight:700; text-align:center; margin-bottom:16px; }
+    .wallet-grid { display:flex; justify-content:space-around; }
+    .wallet-card { text-align:center; cursor:pointer; flex:1; }
+    .wallet-card-icon { background:rgba(255,255,255,0.15); border-radius:50%; width:44px; height:44px; display:flex; align-items:center; justify-content:center; margin:0 auto 6px; }
+    .wallet-card-icon i { font-size:22px; color:#fff; }
+    .wallet-card span { font-size:13px; font-weight:400; color:#fff; }
+    .profile-lower { flex:7; padding:12px; background:#f8f8f8; }
+    .profile-item { display:flex; align-items:center; background:#fff; padding:16px; margin-bottom:10px; border-radius:12px; box-shadow:0 1px 6px rgba(0,0,0,0.06); cursor:pointer; }
+    .profile-item i { font-size:24px; color:#fe2c55; margin-right:16px; width:30px; text-align:center; }
+    .profile-item div { flex:1; }
+    .profile-item h4 { font-size:16px; font-weight:500; margin-bottom:4px; }
+    .profile-item p { font-size:13px; color:#666; font-weight:400; }
+
+    /* Lang */
+    [data-lang="zh"] .en { display:none; }
+    [data-lang="zh"] .zh { display:inline; }
+    [data-lang="en"] .zh { display:none; }
+    [data-lang="en"] .en { display:inline; }
+
+    /* Page */
+    .page { display:none; flex-direction:column; height:100vh; }
+    .page.active { display:flex; }
+  </style>
+</head>
+<body data-lang="en">
+
+<div class="app-container">
+
+  <!-- Task Page -->
+  <div id="task-page" class="page active">
+    <div class="header">
+      <span class="en">Today's Tasks</span>
+      <span class="zh">今日任務</span>
+    </div>
+
+    <div class="task-section">
+      <div class="task-card" id="taskCard">
+        <div class="task-img-wrapper">
+          <img class="task-img" src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800" alt="">
+        </div>
+        <div class="task-info">
+          <div class="title-wrapper">
+            <div class="task-title">
+              <span class="en">Women Platform Chunky Sneakers Casual Shoes</span>
+              <span class="zh">女款厚底休閒增高運動鞋</span>
+            </div>
+            <div class="tag tag-new">New</div>
+          </div>
+          <div class="price-wrapper">
+            <span class="task-price">$24.99</span>
+            <span class="old-price">$29.99</span>
+          </div>
+          <div class="promo-tags">
+            <span class="tag tag-hot">Hot</span>
+            <span class="tag tag-free">Free Shipping</span>
+          </div>
+          <div class="rating">★★★★★ 4.9</div>
+          <div class="sold">1,234 sold</div>
+          <div class="commission">
+            <span class="en">Commission: $0.20 (0.8%)</span>
+            <span class="zh">佣金：$0.20 (0.8%)</span>
+          </div>
+          <div class="shop-name">
+            <i class="fas fa-store shop-icon"></i>
+            @TrendyKicks
+          </div>
+          <button class="buy-btn" onclick="openModal('buy')">
+            <i class="fas fa-shopping-cart"></i>
+            <span class="en">Buy</span>
+            <span class="zh">購買</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="stats-section">
+      <div class="stats-container">
+        <div class="stat-card" id="balance">
+          <div class="stat-icon"><i class="fas fa-wallet"></i></div>
+          <div class="stat-num">$156.40</div>
+          <div class="stat-label">
+            <span class="en">Balance</span><span class="zh">餘額</span>
+          </div>
+        </div>
+        <div class="stat-card" id="commission">
+          <div class="stat-icon"><i class="fas fa-coins"></i></div>
+          <div class="stat-num">$45.20</div>
+          <div class="stat-label">
+            <span class="en">Earned Commission</span><span class="zh">已獲佣金</span>
+          </div>
+        </div>
+        <div class="stat-card" id="tasks">
+          <div class="stat-icon"><i class="fas fa-tasks"></i></div>
+          <div class="stat-num">28/60</div>
+          <div class="stat-label">
+            <span class="en">Tasks Completed</span><span class="zh">完成任務</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Profile Page - 完整恢復 -->
+  <div id="profile-page" class="page">
+    <div class="header">
+      <span class="en">Me</span>
+      <span class="zh">我的</span>
+    </div>
+
+    <div class="profile-upper">
+      <div class="wallet-panel">
+        <div class="wallet-header">
+          <span class="wallet-title">
+            <span class="en">Total Assets (RMB)</span>
+            <span class="zh">总资产 (元)</span>
+          </span>
+          <div class="wallet-icons">
+            <span class="wallet-icon">
+              <i class="fas fa-eye"></i>
+            </span>
+            <span class="wallet-icon">
+              <i class="fas fa-shield-alt"></i>
+              <span class="en">Security Center</span>
+              <span class="zh">安全保障中心</span>
+            </span>
+          </div>
+        </div>
+        <div class="wallet-balance">0.00</div>
+        <div class="wallet-grid">
+          <div class="wallet-card" onclick="openModal('recharge')">
+            <div class="wallet-card-icon"><i class="fas fa-bolt"></i></div>
+            <span class="en">Recharge</span>
+            <span class="zh">充值</span>
+          </div>
+          <div class="wallet-card" onclick="openModal('withdraw')">
+            <div class="wallet-card-icon"><i class="fas fa-wallet"></i></div>
+            <span class="en">Withdraw</span>
+            <span class="zh">提现</span>
+          </div>
+          <div class="wallet-card" onclick="openModal('address')">
+            <div class="wallet-card-icon"><i class="fas fa-box"></i></div>
+            <span class="en">Receive Address</span>
+            <span class="zh">收货地址</span>
+          </div>
+          <div class="wallet-card" onclick="openModal('orders')">
+            <div class="wallet-card-icon"><i class="fas fa-list"></i></div>
+            <span class="en">My Orders</span>
+            <span class="zh">我的订单</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="profile-lower">
+      <div class="profile-item" onclick="openModal('settings')">
+        <i class="fas fa-cog"></i>
+        <div>
+          <h4><span class="en">Settings</span><span class="zh">設置</span></h4>
+          <p>Language, Notifications...</p>
+        </div>
+      </div>
+      <div class="profile-item" onclick="openModal('support')">
+        <i class="fas fa-headset"></i>
+        <div>
+          <h4><span class="en">Help & Support</span><span class="zh">客服幫助</span></h4>
+          <p>Contact us</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Bottom Nav -->
+<div class="bottom-nav">
+  <div class="nav-item active" id="nav-task">
+    <i class="fas fa-list-check"></i>
+    <span class="en">Tasks</span>
+    <span class="zh">任務</span>
+  </div>
+  <div class="nav-spacer"></div>
+  <div class="nav-item" id="nav-profile">
+    <i class="fas fa-user"></i>
+    <span class="en">Me</span>
+    <span class="zh">我的</span>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal" id="modal">
+  <div class="modal-content">
+    <span class="modal-close" onclick="closeModal()">×</span>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<script>
+  // Page Switch
+  document.getElementById('nav-task').addEventListener('click', () => {
+    document.getElementById('task-page').classList.add('active');
+    document.getElementById('profile-page').classList.remove('active');
+    document.getElementById('nav-task').classList.add('active');
+    document.getElementById('nav-profile').classList.remove('active');
+  });
+  document.getElementById('nav-profile').addEventListener('click', () => {
+    document.getElementById('profile-page').classList.add('active');
+    document.getElementById('task-page').classList.remove('active');
+    document.getElementById('nav-profile').classList.add('active');
+    document.getElementById('nav-task').classList.remove('active');
+  });
+
+  // 商品列表
+  const products = [
+    {
+      titleEn: "Women Platform Chunky Sneakers Casual Shoes",
+      titleZh: "女款厚底休閒增高運動鞋",
+      price: 24.99,
+      commission: 0.20,
+      img: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800"
+    },
+    {
+      titleEn: "Breathable Running Sneakers Lightweight",
+      titleZh: "透氣輕量跑鞋 女款",
+      price: 19.88,
+      commission: 0.16,
+      img: "https://images.unsplash.com/photo-1605733513530-2f5e4c1a0133?w=800"
+    },
+    {
+      titleEn: "Fashion Low Top Sneakers Comfort Trainers",
+      titleZh: "時尚低幫舒適休閒鞋",
+      price: 12.79,
+      commission: 0.10,
+      img: "https://images.unsplash.com/photo-1583847268964-b28dc8f51f92?w=800"
+    },
+    {
+      titleEn: "Platform Chunky Dad Sneakers Retro Y2K",
+      titleZh: "厚底老爹鞋 復古 Y2K",
+      price: 22.50,
+      commission: 0.18,
+      img: "https://images.unsplash.com/photo-1605733160316-4fc7dac3df16?w=800"
+    }
+  ];
+
+  let currentProductIndex = 0;
+  let balance = 156.40;
+  let earned = 45.20;
+  let tasksCompleted = 28;
+  const maxTasks = 60;
+
+  const taskCard = document.getElementById('taskCard');
+
+  // 更新商品內容
+  function updateProductContent() {
+    const product = products[currentProductIndex];
+    document.querySelector('.task-title span.en').textContent = product.titleEn;
+    document.querySelector('.task-title span.zh').textContent = product.titleZh;
+    document.querySelector('.task-price').textContent = `$${product.price.toFixed(2)}`;
+    document.querySelector('.commission span.en').textContent = `Commission: $${product.commission.toFixed(2)} (0.8%)`;
+    document.querySelector('.commission span.zh').textContent = `佣金：$${product.commission.toFixed(2)} (0.8%)`;
+    document.querySelector('.task-img').src = product.img;
+  }
+
+  // 數字動畫 - 餘額/佣金
+  function animateNumber(element, start, end, duration, prefix = '', suffix = '') {
+    let startTime = null;
+    const step = (timestamp) => {
+      if (!startTime) startTime = timestamp;
+      const progress = Math.min((timestamp - startTime) / duration, 1);
+      const current = start + (end - start) * progress;
+      element.textContent = prefix + current.toFixed(2) + suffix;
+      if (progress < 1) requestAnimationFrame(step);
+      else element.textContent = prefix + end.toFixed(2) + suffix;
+    };
+    requestAnimationFrame(step);
+  }
+
+  // 任務數動畫 - 個位數滾輪式
+  function animateTaskCount(element, start, end, duration) {
+    const steps = end - start;
+    let count = start;
+    const interval = duration / steps;
+    const timer = setInterval(() => {
+      count++;
+      element.textContent = `${count}/${maxTasks}`;
+      if (count >= end) clearInterval(timer);
+    }, interval);
+  }
+
+  // 購買確認邏輯
+  function handleConfirmPurchase() {
+    const currentProduct = products[currentProductIndex];
+    const price = currentProduct.price;
+    const commission = currentProduct.commission;
+
+    // 扣餘額動畫
+    balance -= price;
+    animateNumber(document.querySelector('#balance .stat-num'), balance + price, balance, 1500, '$');
+
+    closeModal();
+
+    // 商品慢慢縮小 + 向左移除
+    taskCard.classList.add('shrink-out');
+
+    setTimeout(() => {
+      // 更新商品內容
+      currentProductIndex = (currentProductIndex + 1) % products.length;
+      updateProductContent();
+
+      // 新商品從右側小尺寸進入
+      taskCard.classList.add('slide-in');
+
+      setTimeout(() => {
+        // 慢慢放大到正常
+        taskCard.classList.remove('shrink-out', 'slide-in');
+        taskCard.classList.add('zoom-in');
+
+        setTimeout(() => {
+          taskCard.classList.remove('zoom-in');
+
+          // 完成任務動畫
+          balance += price + commission;
+          earned += commission;
+          tasksCompleted++;
+
+          animateNumber(document.querySelector('#balance .stat-num'), balance - price - commission, balance, 1500, '$');
+          animateNumber(document.querySelector('#commission .stat-num'), earned - commission, earned, 1500, '$');
+          animateTaskCount(document.querySelector('#tasks .stat-num'), tasksCompleted - 1, tasksCompleted, 1500);
+        }, 1000);
+      }, 1200);
+    }, 1200);
+  }
+
+  // Modal Content
+  const contents = {
+    buy: `<h3><span class="en">Order Confirm</span><span class="zh">訂單確認</span></h3>
+          <p><strong><span class="en">Product:</span><span class="zh">商品：</span></strong> <span id="modal-product"></span></p>
+          <p><strong><span class="en">Price:</span><span class="zh">價格：</span></strong> <span id="modal-price"></span></p>
+          <p><strong><span class="en">Commission:</span><span class="zh">佣金：</span></strong> <span id="modal-commission"></span></p>
+          <p><strong><span class="en">Shipping Address:</span><span class="zh">收貨地址：</span></strong></p>
+          <p>John Doe, Kaohsiung City, Taiwan 807, No.123 Example St.</p>
+          <button class="confirm-btn" onclick="handleConfirmPurchase()">Confirm Purchase</button>`
+  };
+
+  function openModal(type) {
+    document.getElementById('modal-body').innerHTML = contents[type] || '<h3>Content</h3>';
+    const currentProduct = products[currentProductIndex];
+    document.getElementById('modal-product').textContent = currentProduct.titleEn;
+    document.getElementById('modal-price').textContent = `$${currentProduct.price.toFixed(2)}`;
+    document.getElementById('modal-commission').textContent = `$${currentProduct.commission.toFixed(2)}`;
+    document.getElementById('modal').style.display = 'flex';
+  }
+
+  function closeModal() { 
+    document.getElementById('modal').style.display = 'none'; 
+  }
+
+  // Language
+  function changeLanguage(lang) {
+    document.body.setAttribute('data-lang', lang);
+  }
+
+  // 初始化
+  taskCard.classList.add('visible');
+  updateProductContent();
+</script>
+
+</body>
+</html>
